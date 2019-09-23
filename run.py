@@ -122,17 +122,17 @@ def gen_dictoinary(word_set, dictionary_dir):
 def write_report_for_iapp_format(cnt_tr_sample, cnt_te_sample, cnt_tr_paragraph, cnt_te_paragraph, report_dir):
     with open(report_dir,"w",encoding='utf-8') as file:
         file.write("#######summary for iapp format#######\n")
-        file.write(f'total_train_paragraphs: {cnt_tr_paragraph}\n')
-        file.write(f'total_test_paragraphs: {cnt_te_paragraph}\n')
-        file.write(f'total_train_samples: {cnt_tr_sample}\n')
-        file.write(f'total_test_samples: {cnt_te_sample}\n')
-        file.write(f'Note: There might be some overlapping paragraphs due to randomly train-test separating')
+        file.write('total_train_paragraphs: '+str(cnt_tr_paragraph)+'\n')
+        file.write('total_test_paragraphs: '+str(cnt_te_paragraph)+'\n')
+        file.write('total_train_samples: '+str(cnt_tr_sample)+'\n')
+        file.write('total_test_samples: '+str(cnt_te_sample)+'\n')
+        file.write('Note: There might be some overlapping paragraphs due to randomly train-test separating')
         
 def write_report_for_squard_format(cnt_sample, cnt_broken_sample, report_dir):
     with open(report_dir,"w",encoding='utf-8') as file:
         file.write("#######summary for SQUARD format#######\n")
-        file.write(f'total_usable_samples: {cnt_sample}\n')
-        file.write(f'total_broken_samples: {cnt_broken_sample}')
+        file.write('total_usable_samples: '+str(cnt_sample)+'\n')
+        file.write('total_broken_samples: '+str(cnt_broken_sample)+'\n')
 
 def main():
     dictionary = set()#define dictionary
@@ -198,43 +198,46 @@ def main():
         data_train = []
         data_test = []
         for U_id in obj1['db']:
-            tmp_paragraph = cut_and_clean_blank(obj1['db'][U_id]['detail'], args.engine, STOP_WORDS, RULEs)
-            dictionary = dictionary | set(tmp_paragraph.split())
-            qa_list_train = []
-            qa_list_test = []
-            for QA in obj1['db'][U_id]['QA']:
-                tmp_question = cut_and_clean_blank(QA['q'], args.engine, STOP_WORDS, RULEs)
-                dictionary = dictionary | set(tmp_question.split())
-                cnt_sample = cnt_sample + 1
-                if len(QA['a']) > 0:
-                    tmp_answer = {'text': cut_and_clean_blank(' '.join(QA['a'])\
-                                                              , args.engine, STOP_WORDS, RULEs)}
-                    
-                    try:
-                        tmp_answer['answer_start'] = tmp_paragraph.index(tmp_answer['text'])
-                    except:
+            if 'detail' in obj1['db'][U_id]:
+                tmp_paragraph = cut_and_clean_blank(obj1['db'][U_id]['detail'], args.engine, STOP_WORDS, RULEs)
+                dictionary = dictionary | set(tmp_paragraph.split())
+                qa_list_train = []
+                qa_list_test = []
+                for QA in obj1['db'][U_id]['QA']:
+                    tmp_question = cut_and_clean_blank(QA['q'], args.engine, STOP_WORDS, RULEs)
+                    dictionary = dictionary | set(tmp_question.split())
+                    cnt_sample = cnt_sample + 1
+                    if len(QA['a']) > 0:
+                        tmp_answer = {'text': cut_and_clean_blank(' '.join(QA['a'])\
+                                                                  , args.engine, STOP_WORDS, RULEs)}
+
+                        try:
+                            tmp_answer['answer_start'] = tmp_paragraph.index(tmp_answer['text'])
+                        except:
+                            cnt_broken_sample = cnt_broken_sample + 1
+                            continue
+                        dictionary = dictionary | set(tmp_answer['text'].split())
+                    else:
                         cnt_broken_sample = cnt_broken_sample + 1
                         continue
-                    dictionary = dictionary | set(tmp_answer['text'].split())
-                else:
-                    cnt_broken_sample = cnt_broken_sample + 1
-                    continue
-                if random.uniform(0,1) < (args.train_percent)/100:
-                    cnt_train_sample = cnt_train_sample + 1
-                    qa_list_train.append({'question': tmp_question, 'is_impossible': False,\
-                                          'id': gen_question_id(cnt_sample, args.format), 'answers': tmp_answer})
-                else:
-                    cnt_test_sample = cnt_test_sample + 1
-                    qa_list_test.append({'question': tmp_question, 'is_impossible': False,\
-                                          'id': gen_question_id(cnt_sample, args.format), 'answers': tmp_answer})
-            if len(qa_list_train) > 0:
-                cnt_train_paragraph = cnt_train_paragraph + 1
-                data_train.append({'title': obj1['db'][U_id]['title'], 'paragraphs':\
-                                   [{'context': tmp_paragraph, 'qas': qa_list_train}]})
-            if len(qa_list_test) > 0:
-                cnt_test_paragraph = cnt_test_paragraph + 1
-                data_test.append({'title': obj1['db'][U_id]['title'], 'paragraphs':\
-                                   [{'context': tmp_paragraph, 'qas': qa_list_test}]})
+                    if random.uniform(0,1) < (args.train_percent)/100:
+                        cnt_train_sample = cnt_train_sample + 1
+                        qa_list_train.append({'question': tmp_question, 'is_impossible': False,\
+                                              'id': gen_question_id(cnt_sample, args.format), 'answers': tmp_answer})
+                    else:
+                        cnt_test_sample = cnt_test_sample + 1
+                        qa_list_test.append({'question': tmp_question, 'is_impossible': False,\
+                                              'id': gen_question_id(cnt_sample, args.format), 'answers': tmp_answer})
+                if len(qa_list_train) > 0:
+                    cnt_train_paragraph = cnt_train_paragraph + 1
+                    data_train.append({'title': obj1['db'][U_id]['title'], 'paragraphs':\
+                                       [{'context': tmp_paragraph, 'qas': qa_list_train}]})
+                if len(qa_list_test) > 0:
+                    cnt_test_paragraph = cnt_test_paragraph + 1
+                    data_test.append({'title': obj1['db'][U_id]['title'], 'paragraphs':\
+                                       [{'context': tmp_paragraph, 'qas': qa_list_test}]})
+                    
+        
         with open(args.output_train_dir, 'w',encoding="utf8") as json_file:  
             json.dump({'version': 'v2.0', 'data': data_train}, json_file,ensure_ascii=False)
         with open(args.output_test_dir, 'w',encoding="utf8") as json_file:  
