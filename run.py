@@ -89,9 +89,10 @@ def cut_and_clean_blank(string_in,engine,stop_words,rules):
     string_in = " ".join(string_in.split())
     string_out = word_tokenize(string_in,engine = engine)
     string_out = [x.strip().lower() for x in string_out if x != ' ' and x != '' and x != '  ' and x!= '    ']#get blanks off
-    current_stop_words = set(string_out) & stop_words
-    for i in current_stop_words:
-        string_out.remove(i)
+#   Kobkrit
+#     current_stop_words = set(string_out) & stop_words
+#     for i in current_stop_words:
+#         string_out.remove(i)
     string_out = [x for x in string_out if x != ' ' and x != '' and x != '  ' and x!= '    ']
     return ' '.join(string_out)
 
@@ -223,11 +224,11 @@ def main():
                     if random.uniform(0,1) < (args.train_percent)/100:
                         cnt_train_sample = cnt_train_sample + 1
                         qa_list_train.append({'question': tmp_question, 'is_impossible': False,\
-                                              'id': gen_question_id(cnt_sample, args.format), 'answers': tmp_answer})
+                                              'id': gen_question_id(cnt_sample, args.format), 'answers': [tmp_answer]})
                     else:
                         cnt_test_sample = cnt_test_sample + 1
                         qa_list_test.append({'question': tmp_question, 'is_impossible': False,\
-                                              'id': gen_question_id(cnt_sample, args.format), 'answers': tmp_answer})
+                                              'id': gen_question_id(cnt_sample, args.format), 'answers': [tmp_answer]})
                 if len(qa_list_train) > 0:
                     cnt_train_paragraph = cnt_train_paragraph + 1
                     data_train.append({'title': obj1['db'][U_id]['title'], 'paragraphs':\
